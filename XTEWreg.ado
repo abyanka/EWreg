@@ -1,8 +1,11 @@
-capture program drop XTEWreg2
-program define XTEWreg2, eclass
-	version 10.1
-	syntax varlist(min=2 numeric) [if] [in] , MAXDeg(integer) [MISmeasured(integer 1)  METHod(string) PANmethod(string) BXint(numlist) HAScons NOPRN VCE(string) OPTim(integer 2) CENTmom(string)]
+capture program drop XTEWreg
+program define XTEWreg, eclass
+	version 12
+	//syntax varlist(min=2 numeric) [if] [in] , MAXDeg(integer) [MISmeasured(integer 1)  METHod(string) PANmethod(string) BXint(numlist) HAScons NOPRN VCE(string) OPTim(integer 2) CENTmom(string)]
+	syntax varlist(min=2 numeric) [if] [in] , MAXDeg(integer) [MISmeasured(integer 1)  METHod(string) PANmethod(string) BXint(numlist) CENTmom(string) HAScons NOPRN]
 	marksample touse
+
+	local optim = 2
 
 	quietly count if `touse'
 	if `r(N)' == 0 error 2000
@@ -151,7 +154,7 @@ end
 
 
 
-version 10.1
+version 12
 mata:
 
 mata clear

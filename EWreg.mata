@@ -1,5 +1,3 @@
-*! version 1.0.0 class EWreg
-
 /* 
 Author: Robert Parham, University of Rochester
 
@@ -7,7 +5,7 @@ This work is licensed under the Creative Commons Attribution 4.0 International L
 To view a copy of this license, visit http://creativecommons.org/licenses/by/4.0/.
 */
 
-version 11
+version 12
 
 mata:
 
@@ -215,8 +213,6 @@ real colvector EWreg::deff(real colvector t)
 // criterion function for EWgmm1. Provide the obj func and the gradient thereof
 void i_crit(real scalar todo, real rowvector b, real scalar crit, real rowvector g, real matrix H)
 {
-	// RPG - currently disabled
-
 	class EWreg scalar EWobj
 	
 	p = findexternal("EWexternal")
@@ -342,22 +338,23 @@ real colvector EWreg::EWgmm1(real matrix w, real colvector t)
 real colvector EWreg::dogmm(real matrix w, real colvector t)
 {
 	if (opt.optmet == 1) {
-		printf("Using BFGS optimizer. \n")
+		//printf("Using BFGS optimizer. \n")
 		t1 = EWgmm1(w,t)
 		if (rows(t1)!=0) return (t1)
 		// if here it means BFGS failed
+		printf("BFGS failed. Attempting Gauss-Newton optimizer. \n")
 	}
 
 	// if here it means BFGS failed or optmet==2
-	printf("Using Gauss-Newton optimizer. \n")
+	//printf("Using Gauss-Newton optimizer. \n")
 	t1 = EWgmm2(w,t)
 	
 	if (opt.optmet == 2 & t1[1,1]==0) {
 		//GN was first, we ran it, and it stopped after maxiter
-		printf("Attempting BFGS optimizer. \n")
+		printf("Gauss-Newton failed. Attempting BFGS optimizer. \n")
 		t2 = EWgmm1(w,t1[2..rows(t1),1])
 		if (rows(t2)==0) {
-			printf("BFGS failed to find better solution than Gauss-Newton.")
+			printf("BFGS failed to find a better solution than Gauss-Newton.")
 			return (t1[2..rows(t1),1])
 		}
 		return (t2)
@@ -373,22 +370,24 @@ real matrix EWreg::dogeeRT(real matrix sigz, real scalar denomy, real scalar num
 					real colvector denomx, real colvector numerx, real matrix sigeta, 			///
 					numeric rowvector eta2p)
 {
-	nrows = (opt.nx+1)*opt.nz + opt.nz*(opt.nz+1)/2 + opt.nx + opt.nx*(opt.nx+1)/2 + 1 + opt.nx
+
+	//			muyx				sigz				beta		etaj				eps	  u
+	nrows = (opt.nx+1)*opt.nz + opt.nz*(opt.nz+1)/2 + opt.nx + opt.nx*(opt.nx+1)/2 + opt.nx + 1
 
 	// first column rho2, next nx columns tau2j
 	gee = J(nrows,(1+opt.nx),0)
-	counter=1
-	
 	
 	/*** start with rho2 column (column 1) ***/
 	
 	// derivatives wrt muy
+	counter=1
 	for (i=1;i<=opt.nz;i++) {
 		gee[counter,1]= (2*dta.muy'*sigz[,i])/denomy - numery*(2*dta.muy'*sigz[,i])/(denomy^2)
 		counter++
 	}
 
 	// derivatives wrt sigz
+	counter=(opt.nx+1)*opt.nz + 1
 	for (i=1;i<=opt.nz;i++) {
 		for (j=i;j<=opt.nz;j++) {
 			x = ((i!=j)*1+1)*dta.muy[i,1]*dta.muy[j,1]
@@ -415,21 +414,23 @@ real matrix EWreg::dogeeRT(real matrix sigz, real scalar denomy, real scalar num
 	}
 	
 	// E(u^2) is lonely
-	counter = (opt.nx+1)*opt.nz + (opt.nz+opt.nz*(opt.nz-1)/2) + opt.nx + opt.nx*(opt.nx+1)/2 + 1
+	//			muyx				sigz				 beta		etaj				eps
+	counter = (opt.nx+1)*opt.nz + opt.nz*(opt.nz+1)/2 + opt.nx + opt.nx*(opt.nx+1)/2 + opt.nx + 1
 	gee[counter,1] = -numery/(denomy^2)
 	
 	
 	/*** now for the tau columns ***/
 
 	for (jt=1;jt<=opt.nx;jt++) {
-		counter = 1
 		// derivatives wrt mux
+		counter = opt.nz*jt + 1
 		for (i=1;i<=opt.nz;i++) {
 			gee[counter,1+jt]= (2*dta.mux[.,jt]'*sigz[,i])/denomx[jt,1] - numerx[jt,1]*(2*dta.mux[.,jt]'*sigz[,i])/(denomx[jt,1]^2)
 			counter++
 		}
 
 		// derivatives wrt sigz
+		counter=(opt.nx+1)*opt.nz + 1
 		for (i=1;i<=opt.nz;i++) {
 			for (j=i;j<=opt.nz;j++) {
 				x = ((i!=j)*1+1)*dta.mux[i,jt]*dta.mux[j,jt]
@@ -440,10 +441,10 @@ real matrix EWreg::dogeeRT(real matrix sigz, real scalar denomy, real scalar num
 		
 		// derivatives wrt the members of t we care about
 		// E(eta^2)j
-		counter = (opt.nx+1)*opt.nz + (opt.nz+opt.nz*(opt.nz-1)/2) + opt.nx + eta2p[1,jt]
+		counter = (opt.nx+1)*opt.nz + opt.nz*(opt.nz+1)/2 + opt.nx + eta2p[1,jt]
 		gee[counter,1+jt] = 1/denomx[jt,1] - numerx[jt,1]/(denomx[jt,1]^2)
 		// E(eps^2)j
-		counter = (opt.nx+1)*opt.nz + (opt.nz+opt.nz*(opt.nz-1)/2) + opt.nx + opt.nx*(opt.nx+1)/2 + 1 + jt
+		counter = (opt.nx+1)*opt.nz + opt.nz*(opt.nz+1)/2 + opt.nx + opt.nx*(opt.nx+1)/2 + jt
 		gee[counter,1+jt] = - numerx[jt,1]/(denomx[jt,1]^2)
 	}
 	
@@ -479,22 +480,26 @@ struct stats scalar EWreg::getret()
 	retval.Jstat 	= obj*opt.n
 	if (opt.doMOM())	retval.dfree = opt.neq-opt.nt
 	else 				retval.dfree = opt.nk-opt.nx
-	retval.Jval  		= 1-chi2(retval.dfree,retval.Jstat)
+	retval.Jval  	= 1-chi2(retval.dfree,retval.Jstat)
 
 	
 	/*** inflncX + inflncT ***/
 	
 	if (opt.doMOM()) {
-		g = gradMOM(pprb->Drhs, t, 1)					//[neq,nt]
-		inflncT = (cholinv(g'*w*g)*g'*w*ff')'  		//[n,nt], NOTE - Minus removed!
+		g 		= gradMOM(pprb->Drhs, t, 1)			//[neq,nt]
+		nvcX 	= cholinv(g'*w*g)
+		vcX 	= nvcX/opt.n
+		inflncT = (nvcX*g'*w*ff')'  				//[n,nt], NOTE - Minus removed!
 		inflncX = inflncT[.,1..opt.nx]				//[n,nx]
 		inflncT = inflncT[.,(opt.nx+1)..opt.nt]		//[n,nt-nx]
 	}
 	else {
 		D 		= dta.Dky - dta.Dkx*(dta.bX#I(opt.neq))			//[nk,neq]
-		inflncX = (cholinv(dta.kx'*w*dta.kx)*dta.kx'*w*D*ff')'	//[n,nx]
-		t		= pprb->resolve_eq(pprb->mom2, dta.bX, opt.neq2, opt.nx, opt.nt2, dta.emom)	//[1,nt2]
-		g		= gradMOM(pprb->Dmom2, t, 0)						//[neq2,nt2]
+		nvcX 	= cholinv(dta.kx'*w*dta.kx)
+		vcX 	= nvcX/opt.n
+		inflncX = (nvcX*dta.kx'*w*D*ff')'						//[n,nx]
+		t		= pprb->resolve_eq(pprb->mom2, dta.bX, opt.neq2, opt.nx, opt.nt2, dta.emom)	//[nt2,1]
+		g		= gradMOM(pprb->Dmom2, t, 0)					//[neq2,nt2]
 		tmp		= I(opt.nt2)
 		g 		= tmp[1..opt.nx,.]\g							//[neq2+nx,nt2] == [nt2,nt2]
 		ff2		= (inflncX, ff[.,1..opt.neq2])					//[n,nt2]
@@ -503,6 +508,7 @@ struct stats scalar EWreg::getret()
 		inflncT = inflncT[.,(opt.nx+1)..opt.nt2]				//[n,nt2-nx] == [n,neq2]
 	}
 	
+
 	// redefine a local version of nt and ntvec to fit both MOM and CML
 	if (opt.doMOM()) {
 		nt = opt.nt
@@ -570,36 +576,31 @@ struct stats scalar EWreg::getret()
 	denomy=(numery+t[u2,1])
 	dta.rho=numery/denomy
 
-	// do tau, RPG - verfiy tau formula. not in EW2002
+	// do tau
 	numerx=diagonal(dta.mux'*sigz*dta.mux) :+ t[eta2,1]
 	denomx=(numerx:+t[eps2,1])
 	dta.tau=numerx:/denomx
 
 	
 	/*** SE rho and tau ***/
-	
-	vecsigz=J(opt.nz+opt.nz*(opt.nz-1)/2,1,0)
-	vecsigz[1..opt.nz,1]=diagonal(sigz)
 
-	phiz=J(opt.n,opt.nz+opt.nz*(opt.nz-1)/2,0)
-	phiz[.,1..opt.nz]=(dta.z-J(opt.n,1,1)#ez):*(dta.z-J(opt.n,1,1)#ez)
+	vecsigz=J(opt.nz*(opt.nz+1)/2,1,0)
+	phiz=J(opt.n,opt.nz*(opt.nz+1)/2,0)
 
-	// here we pack the top half of the sigz matrix into a vector, and build phiz
-	counter=opt.nz+opt.nz*(opt.nz-1)/2
-	for (qq=opt.nz;qq>=2;qq--)
-	{
-		for (ee=qq-1;ee>=1;ee--)
-		{
-			vecsigz[counter,1]=sigz[ee,qq]
-			phiz[.,counter]=(dta.z[,ee]-J(opt.n,1,1)#ez[1,ee]):*(dta.z[,qq]-J(opt.n,1,1)#ez[1,qq])
-			counter=counter-1
+	counter=1
+	for (i=1;i<=opt.nz;i++) {
+		for (j=i;j<=opt.nz;j++) {
+			vecsigz[counter,1] = sigz[i,j]
+			phiz[.,counter]=(dta.z[,i]-J(opt.n,1,1)#ez[1,i]):*(dta.z[,j]-J(opt.n,1,1)#ez[1,j])
+			counter++
 		}
 	}
-	phiz=phiz-J(opt.n,1,1)#vecsigz'
-
+	phiz=phiz:-J(opt.n,1,1)#vecsigz'
+	
 	// make the influence functions for rhotau
-	bigphiRT = (phimuyx, phiz, inflncX, inflncT[.,eta2_all:-opt.nx], inflncT[.,u2:-opt.nx], inflncT[.,eps2:-opt.nx])
+	bigphiRT = (phimuyx, phiz, inflncX, inflncT[.,eta2_all:-opt.nx], inflncT[.,eps2:-opt.nx], inflncT[.,u2:-opt.nx])
 	avarRT = getomega(bigphiRT):/opt.n
+	
 	
 	// build geeRT
 	eta2p = eta2 :- ntvec[1,1]
@@ -616,11 +617,8 @@ struct stats scalar EWreg::getret()
 	retval.rho 			= dta.rho
 	retval.tau 			= dta.tau
 	retval.beta 		= dta.bX\dta.bZ
-	retval.VCmat 		= cross(retval.inflncXZ,retval.inflncXZ):/(opt.n^2)
+	retval.VCmat 		= getomega(retval.inflncXZ):/opt.n
 	retval.serr 		= sqrt(diagonal(retval.VCmat))
-	
-	//correct serr for clustering
-	retval.serr[(opt.nx+1)..rows(retval.serr),1] = seZ
 	
 	return (retval)
 }
@@ -654,7 +652,6 @@ struct stats scalar EWreg::doCLS(transmorphic colvector id, real colvector y, re
 	dta = EWdata()
 	dta.einit(opt, *pprb, id, y ,x, z, bXint)
 	
-
 	// do identification tests
 	// RPG - skip id tests for now
 

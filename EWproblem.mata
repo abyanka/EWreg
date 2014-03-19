@@ -1,5 +1,3 @@
-*! version 1.0.0 class EWproblem
-
 /* 
 Author: Robert Parham, University of Rochester
 
@@ -7,32 +5,9 @@ This work is licensed under the Creative Commons Attribution 4.0 International L
 To view a copy of this license, visit http://creativecommons.org/licenses/by/4.0/.
 */
 
-version 11
+version 12
 
 mata:
-
-// a serialization struct of a EWproblem
-struct serprob {
-		struct sereqn 	colvector	lhs
-		struct sereqn 	matrix		Dlhs
-		struct sereqn 	colvector	N1lhs
-		struct sereqn 	colvector	rhs
-		struct sereqn 	matrix		Drhs
-		struct sereqn 	colvector	mom2
-		struct sereqn 	matrix		Dmom2
-		struct sereqn 	colvector	cml
-		struct sereqn 	matrix		Dcml
-		
-		real 			matrix		rmat
-		real			matrix		rocmat
-		real 			matrix		N1rmat
-		real			matrix		N1rocmat
-		real			rowvector	neqvec
-		real			colvector	ntvec
-		real			colvector	ntvec2
-}
-//  end sereqn
-
 
 // a problem definition class
 class EWproblem {
@@ -82,9 +57,7 @@ class EWproblem {
 		real			rowvector	yidx			//[1,nk]
 		real			matrix		xidx			//[nx,nk]
 
-		struct serprob	scalar		serialize()
 		void 						einit()
-		void						sinit()
 		real 			matrix		getW2()
 		real			colvector	resolve_eq()
 }
@@ -526,56 +499,6 @@ void EWproblem::get_D(class Symbolic colvector systm, class Symbolic matrix Dsys
 // end get_D
 
 
-// serialize problem
-struct serprob scalar EWproblem::serialize()
-{
-	// make serialize fully data dependant
-	neq 	= rows(Drhs)
-	nt 		= cols(Drhs)
-	neq2 	= rows(mom2)
-	
-	struct serprob scalar retval
-	retval = serprob()
-	
-	retval.rmat 		= rmat
-	retval.rocmat 		= rocmat
-	retval.neqvec 		= neqvec
-	retval.ntvec 		= ntvec
-	retval.ntvec2 		= ntvec2
-
-	retval.lhs = J(neq,1,sereqn())
-	retval.rhs = J(neq,1,sereqn())
-	retval.Drhs = J(neq,nt,sereqn())
-	
-	for (i=1;i<=neq;i++) {
-		retval.lhs[i,1] = lhs[i,1].serialize()
-		retval.rhs[i,1] = rhs[i,1].serialize()
-		for (j=1;j<=nt;j++) {
-			retval.Drhs[i,j] = Drhs[i,j].serialize()
-		}
-	}
-
-	retval.mom2 = J(neq2,1,sereqn())
-
-	for (i=1;i<=neq2;i++) {
-		retval.mom2[i,1] = mom2[i,1].serialize()
-	}
-
-	retval.cml = J(neq,1,sereqn())
-	retval.Dcml = J(neq,neq,sereqn())
-
-	for (i=1;i<=neq;i++) {
-		retval.cml[i,1] = cml[i,1].serialize()
-		for (j=1;j<=neq;j++) {
-			retval.Dcml[i,j] = Dcml[i,j].serialize()
-		}
-	}
-	
-	return (retval)
-}
-// end serialize
-
-
 // initialize problem
 void EWproblem::einit(real scalar maxdeg, real scalar nx)
 {
@@ -623,88 +546,9 @@ void EWproblem::einit(real scalar maxdeg, real scalar nx)
 	
 	get_idx(maxdeg, nx, nk, neq, neqvecfull)
 	
-	// DISABLE problem saving
 	return
-	/*
-	// serialize the problem into cache
-	if ((fh = _fopen(fname, "w")) < 0) {
-		printf("Error opening cache file. Continuing.\n")
-		return
-	}
-	
-	if ((err = _fputmatrix(fh,serialize())) < 0) {
-		printf("Error saving problem to cache file. Continuing.\n")
-		printf("%g\n",err)
-	}
-	
-	if (_fclose(fh) < 0) printf("Error closing cache file. Continuing.")
-	*/
-	
 }
 // end einit
-
-
-// initialize problem from serialization
-void EWproblem::sinit(real scalar maxdeg, real scalar nx, string scalar fname)
-{
-	// read problem from file
-	fh = _fopen(fname, "r")
-	
-	if (fh<0) {
-		einit(maxdeg, nx, fname)
-		return
-	}
-	
-	struct serprob scalar ser
-	ser = _fgetmatrix(fh)
-	if (fstatus(fh) < 0) {
-		printf("Error reading cache file. Continuing.")
-		einit(maxdeg, nx, fname)
-		return
-	}
-	
-	if (_fclose(fh)<0) printf("Error closing cache file. Continuing.")
-	
-	// make sinit fully data dependant
-	neq 	= rows(ser.Drhs)
-	nt 		= cols(ser.Drhs)
-	neq2 	= rows(ser.mom2)
-
-	rmat 		= ser.rmat
-	rocmat 		= ser.rocmat
-	neqvec 		= ser.neqvec
-	ntvec 		= ser.ntvec
-	ntvec2 		= ser.ntvec2
-
-	lhs = J(neq,1,Symbolic())
-	rhs = J(neq,1,Symbolic())
-	Drhs = J(neq,nt,Symbolic())
-	
-	for (i=1;i<=neq;i++) {
-		lhs[i,1].sinit(ser.lhs[i,1])
-		rhs[i,1].sinit(ser.rhs[i,1])
-		for (j=1;j<=nt;j++) {
-			Drhs[i,j].sinit(ser.Drhs[i,j])
-		}
-	}
-
-	mom2 = J(neq2,1,Symbolic())
-
-	for (i=1;i<=neq2;i++) {
-		mom2[i,1].sinit(ser.mom2[i,1])
-	}
-
-	cml = J(neq,1,Symbolic())
-	Dcml = J(neq,neq,Symbolic())
-
-	for (i=1;i<=neq;i++) {
-		cml[i,1].sinit(ser.cml[i,1])
-		for (j=1;j<=neq;j++) {
-			Dcml[i,j].sinit(ser.Dcml[i,j])
-		}
-	}
-}
-// end sinit
 
 
 // return the lower part of the W matrix of Eq26

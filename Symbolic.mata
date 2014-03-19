@@ -1,5 +1,3 @@
-*! version 1.0.0 class Symbolic
-
 /* 
 Author: Robert Parham, University of Rochester
 
@@ -7,19 +5,9 @@ This work is licensed under the Creative Commons Attribution 4.0 International L
 To view a copy of this license, visit http://creativecommons.org/licenses/by/4.0/.
 */
 
-version 11
+version 12
 
 mata:
-
-// a serialization struct of a Symbolic class
-struct sereqn {
-		real matrix loc
-		numeric rowvector A
-		real scalar N
-		real scalar T
-}
-//  end sereqn
-
 
 // represent a symbolic equation
 class Symbolic {
@@ -36,8 +24,6 @@ class Symbolic {
 		
 	public:
 		void 						einit()
-		void 						sinit()
-		struct sereqn scalar 		serialize()
 		real scalar 				getN()
 		real scalar 				getT()
 		numeric rowvector 			getA()
@@ -107,33 +93,6 @@ void Symbolic::einit(real scalar n)
 	A = J(1,0,0)
 }
 // end einit
-
-
-// initialize the equation from a serialization
-void Symbolic::sinit(struct sereqn scalar ser)
-{
-	T = ser.T
-	N = ser.N
-	A = ser.A
-	loc = ser.loc
-}
-// end sinit
-
-
-// return equation serialization
-struct sereqn scalar Symbolic::serialize()
-{
-	struct sereqn scalar ser
-	ser = sereqn()
-	
-	ser.T = T
-	ser.N = N
-	ser.A = A
-	ser.loc = loc
-	
-	return (ser)
-}
-// end serialize
 
 
 // return N value

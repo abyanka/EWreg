@@ -1,5 +1,3 @@
-*! version 1.0.0 class Partitions
-
 /* 
 Author: Robert Parham, University of Rochester
 
@@ -11,7 +9,7 @@ Journal of Statistical Software, Code Snippets, 16(1)
 */
 
 
-version 11
+version 12
 
 mata:
 
