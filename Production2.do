@@ -22,7 +22,7 @@ adopath + "${workfold}${scriptfold}"
 
 // Compile an mlib
 qui {
-// /*
+/*
 mata: mata clear
 
 do "${scriptfold}Symbolic.mata"
@@ -46,7 +46,7 @@ mata mlib add lEW mt()
 
 mata mlib index
 end
-// */
+*/
 }
 
 
@@ -102,9 +102,9 @@ qui: xtset gvkey
 //XTEWreg ik q cfk , maxd(3) mis(1)
 //XTEWreg ik q cfk , maxd(4) mis(1)
 //XTEWreg ik q cfk , maxd(5) mis(1)
-//XTEWreg lever mtb tangib logsales oi , maxd(3) mis(2) meth(MOM)
-//XTEWreg lever mtb tangib logsales oi , maxd(4) mis(2) meth(MOM)
-XTEWreg lever mtb tangib logsales oi , maxd(5) mis(2) meth(MOM)
+//XTEWreg lever mtb tangib logsales oi , maxd(3) mis(2) 
+//XTEWreg lever mtb tangib logsales oi , maxd(4) mis(2) 
+XTEWreg lever mtb tangib logsales oi , maxd(5) mis(2) 
 
 /*
 XTEWreg ik q cfk , maxd(5) cent(set)
